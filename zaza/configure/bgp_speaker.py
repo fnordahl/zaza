@@ -3,6 +3,11 @@
 import argparse
 import logging
 import sys
+import yaml
+
+import zaza.charm_lifecycle.utils as utils
+import zaza.model
+
 from zaza.utilities import _local_utils
 from zaza.utilities import openstack_utils
 
@@ -22,6 +27,29 @@ def setup_bgp_speaker(peer_application_name, keystone_session=None):
     :returns: None
     :rtype: None
     """
+    # Get ASNs from deployment
+    dr_unit = zaza.model.get_first_unit_name(utils.get_juju_model(),
+                                             'neutron-dynamic-routing')
+    peer_unit = zaza.model.get_first_unit_name(utils.get_juju_model(),
+                                               peer_application_name)
+    dr_relation = yaml.load(
+        zaza.model.run_on_unit(
+            utils.get_juju_model(), dr_unit,
+            'relation-get --format=yaml -r $(relation-ids bgp-speaker) - {}'
+            .format(peer_unit),
+        ).get('Stdout')
+    )
+    peer_asn = dr_relation.get('asn')
+    logging.debug('peer ASn: "{}"'.format(peer_asn))
+    peer_relation = yaml.load(
+        zaza.model.run_on_unit(
+            utils.get_juju_model(), peer_unit,
+            'relation-get --format=yaml -r $(relation-ids bgpclient) - {}'
+            .format(dr_unit),
+        ).get('Stdout')
+    )
+    dr_asn = peer_relation.get('asn')
+    logging.debug('our ASn: "{}"'.format(dr_asn))
 
     # If a session has not been provided, acquire one
     if not keystone_session:
@@ -34,7 +62,7 @@ def setup_bgp_speaker(peer_application_name, keystone_session=None):
     # Create BGP speaker
     logging.info("Setting up BGP speaker")
     bgp_speaker = openstack_utils.create_bgp_speaker(
-        neutron_client, local_as=12345)
+        neutron_client, local_as=dr_asn)
 
     # Add networks to bgp speaker
     logging.info("Advertising BGP routes")
@@ -51,7 +79,7 @@ def setup_bgp_speaker(peer_application_name, keystone_session=None):
     logging.info("Setting up BGP peer")
     bgp_peer = openstack_utils.create_bgp_peer(neutron_client,
                                                peer_application_name,
-                                               remote_as=10000)
+                                               remote_as=peer_asn)
     # Add peer to bgp speaker
     logging.info("Adding BGP peer to BGP speaker")
     openstack_utils.add_peer_to_bgp_speaker(
