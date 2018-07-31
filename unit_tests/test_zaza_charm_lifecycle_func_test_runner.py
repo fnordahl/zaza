@@ -30,6 +30,8 @@ class TestCharmLifecycleFuncTestRunner(ut_utils.BaseTestCase):
         self.assertEqual(args.bundle, 'mybundle')
         args = lc_func_test_runner.parse_args(['--log', 'DEBUG'])
         self.assertEqual(args.loglevel, 'DEBUG')
+        args = lc_func_test_runner.parse_args(['--config', 'file'])
+        self.assertEqual(args.config, 'file')
 
     def test_func_test_runner(self):
         self.patch_object(lc_func_test_runner.utils, 'get_charm_config')
@@ -156,6 +158,31 @@ class TestCharmLifecycleFuncTestRunner(ut_utils.BaseTestCase):
         deploy_calls = [
             mock.call('./tests/bundles/maveric-filebeat.yaml', 'newmodel')]
         self.deploy.assert_has_calls(deploy_calls)
+
+    def test_func_test_runner_specify_config(self):
+        self.patch_object(lc_func_test_runner.utils, 'get_charm_config')
+        self.patch_object(lc_func_test_runner, 'generate_model_name')
+        self.patch_object(lc_func_test_runner.prepare, 'prepare')
+        self.patch_object(lc_func_test_runner.deploy, 'deploy')
+        self.patch_object(lc_func_test_runner.configure, 'configure')
+        self.patch_object(lc_func_test_runner.test, 'test')
+        self.patch_object(lc_func_test_runner.destroy, 'destroy')
+        self.generate_model_name.return_value = 'newmodel'
+        self.get_charm_config.return_value = {
+            'charm_name': 'mycharm',
+            'gate_bundles': ['bundle1', 'bundle2'],
+            'smoke_bundles': ['bundle2'],
+            'dev_bundles': ['bundle3', 'bundle4'],
+            'configure': [
+                'zaza.charm_tests.mycharm.setup.basic_setup'
+                'zaza.charm_tests.othercharm.setup.setup'],
+            'tests': [
+                'zaza.charm_tests.mycharm.tests.SmokeTest',
+                'zaza.charm_tests.mycharm.tests.ComplexTest']}
+        lc_func_test_runner.func_test_runner(config='file')
+        get_charm_config_calls = [
+            mock.call(yaml_file='file')]
+        self.get_charm_config.assert_has_calls(get_charm_config_calls)
 
     def test_main_loglevel(self):
         self.patch_object(lc_func_test_runner, 'parse_args')

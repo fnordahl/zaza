@@ -36,3 +36,10 @@ class TestCharmLifecycleTest(ut_utils.BaseTestCase):
             args.tests,
             ['my.test_class1', 'my.test_class2'])
         self.assertEqual(args.model_name, 'modelname')
+        self.assertEqual(args.config, './tests/tests.yaml')
+
+    def test_parser_config(self):
+        args = lc_test.parse_args(
+            ['-m', 'modelname', '--config', 'file'])
+        self.assertEqual(args.model_name, 'modelname')
+        self.assertEqual(args.config, 'file')

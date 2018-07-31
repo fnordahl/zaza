@@ -23,7 +23,8 @@ def generate_model_name():
     return 'zaza-{}'.format(str(uuid.uuid4())[-12:])
 
 
-def func_test_runner(keep_model=False, smoke=False, dev=False, bundle=None):
+def func_test_runner(keep_model=False, smoke=False, dev=False, bundle=None,
+                     config=None):
     """Deploy the bundles and run the tests as defined by the charms tests.yaml.
 
     :param keep_model: Whether to destroy model at end of run
@@ -33,7 +34,7 @@ def func_test_runner(keep_model=False, smoke=False, dev=False, bundle=None):
     :type smoke: boolean
     :type dev: boolean
     """
-    test_config = utils.get_charm_config()
+    test_config = utils.get_charm_config(yaml_file=config)
     if bundle:
         bundles = [bundle]
     else:
@@ -90,10 +91,13 @@ def parse_args(args):
                         required=False)
     parser.add_argument('--log', dest='loglevel',
                         help='Loglevel [DEBUG|INFO|WARN|ERROR|CRITICAL]')
+    parser.add_argument('--config', dest='config',
+                        help='Configuration file in YAML format')
     parser.set_defaults(keep_model=False,
                         smoke=False,
                         dev=False,
-                        loglevel='INFO')
+                        loglevel='INFO',
+                        config='./tests/tests.yaml')
     return parser.parse_args(args)
 
 
@@ -122,5 +126,6 @@ def main():
         keep_model=args.keep_model,
         smoke=args.smoke,
         dev=args.dev,
-        bundle=args.bundle)
+        bundle=args.bundle,
+        config=args.config)
     asyncio.get_event_loop().close()

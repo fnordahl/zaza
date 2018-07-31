@@ -45,6 +45,9 @@ def parse_args(args):
                         required=False)
     parser.add_argument('-m', '--model-name', help='Name of model to remove',
                         required=True)
+    parser.add_argument('--config', dest='config',
+                        help='Configuration file in YAML format')
+    parser.set_defaults(config='./tests/tests.yaml')
     return parser.parse_args(args)
 
 
@@ -57,6 +60,7 @@ def main():
     """
     logging.basicConfig(level=logging.INFO)
     args = parse_args(sys.argv[1:])
-    funcs = args.configfuncs or utils.get_charm_config()['configure']
+    funcs = args.configfuncs or utils.get_charm_config(
+        yaml_file=args.config)['configure']
     configure(args.model_name, funcs)
     asyncio.get_event_loop().close()
