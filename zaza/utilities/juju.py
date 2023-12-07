@@ -279,11 +279,26 @@ def get_machine_series(machine, model_name=None):
     :returns: Juju series
     :rtype: string
     """
-    return get_machine_status(
+    status = get_machine_status(
         machine=machine,
-        key='series',
         model_name=model_name
     )
+    try:
+        if 'series' in status:
+            return status.get('series')
+    except KeyError:
+        # libjuju will raise make the above check return KeyError when not
+        # present...
+        pass
+
+    distro, version = status.get('base', '@').split('@')
+    if not distro:
+        raise ValueError("Unable to determine distro from status: '{}'"
+                         .format(status))
+    if distro != 'ubuntu':
+        raise NotImplementedError("Series resolution not implemented for "
+                                  "distro: '{}'".format(distro))
+    return get_ubuntu_series_by_version()[version]['name']
 
 
 def get_machine_uuids_for_application(application, model_name=None):
